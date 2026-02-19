@@ -109,11 +109,10 @@ create index if not exists document_chunks_content_fts
   on public.document_chunks
   using gin(to_tsvector('english', content));
 
--- Vector similarity search index (for when embeddings are added)
+-- Vector similarity search index (hnsw works on empty tables, unlike ivfflat)
 create index if not exists document_chunks_embedding_idx
   on public.document_chunks
-  using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
+  using hnsw (embedding vector_cosine_ops);
 
 -- ============================================================
 -- VECTOR SIMILARITY SEARCH FUNCTION
