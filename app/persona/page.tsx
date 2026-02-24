@@ -7,12 +7,12 @@ import { PERSONAS } from '@/types'
 import { Button } from '@/components/ui/button'
 
 const PERSONA_ICONS: Record<string, string> = {
-  av_integrator: '🔧',
-  manufacturer: '🏭',
+  vendor: '🏭',
   distributor: '📦',
+  reseller: '🤝',
   end_user: '💼',
   consultant: '📋',
-  managed_services: '🖥️',
+  researcher: '🔍',
 }
 
 export default function PersonaPage() {
