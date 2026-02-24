@@ -119,11 +119,11 @@ function ChatContent() {
     }
   }
 
-  const SUGGESTED_QUESTIONS = [
-    'What are the top challenges facing AV integrators today?',
-    'How are managed services models evolving in the AV industry?',
+  const SUGGESTED_QUESTIONS = persona?.suggestedQuestions ?? [
+    'What market trends are shaping the AV industry right now?',
     'What technology categories are seeing the most growth?',
-    'How do end users evaluate and select AV vendors?',
+    'What are the main adoption challenges across the channel?',
+    'How are channel relationships evolving between vendors and resellers?',
   ]
 
   return (
