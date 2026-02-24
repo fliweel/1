@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
-import { searchKnowledgeBase, buildContext } from '@/lib/rag'
 import { PERSONAS } from '@/types'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,61 +46,48 @@ export async function POST(request: NextRequest) {
       content: message,
     })
 
-    // Retrieve conversation history (last 10 messages)
+    // Retrieve conversation history (last 20 messages, including the one just saved)
     const { data: history } = await supabase
       .from('messages')
       .select('role, content')
       .eq('conversation_id', activeConversationId)
       .order('created_at', { ascending: true })
-      .limit(10)
+      .limit(20)
 
-    // Search knowledge base (vector search if embeddings available, else full-text)
-    const chunks = await searchKnowledgeBase(message, null, 5)
-    const context = buildContext(chunks)
-
-    // Find persona
+    // Build persona-aware system prompt
     const persona = PERSONAS.find((p) => p.id === personaId)
-    const personaHint = persona?.systemPromptHint ?? ''
 
-    // Build system prompt
-    const systemPrompt = `You are Channel Agent, an expert market intelligence assistant for the Audio Visual (AV) industry. You provide data-driven insights, trends, and analysis based on industry survey data and research.
+    const systemPrompt = `You are Channel Agent, an expert market intelligence assistant for the AV/UC (Audio Visual / Unified Communications) industry. You provide data-driven insights, trends, and analysis grounded in channel research and industry survey data.
 
-${personaHint}
+${persona?.systemPromptHint ?? ''}
 
-Your responses should be:
-- Grounded in the knowledge base data provided below
-- Specific and quantitative where data supports it
-- Actionable and relevant to the user's persona
-- Professional but conversational in tone
-- Honest about limitations when data is insufficient
+Guidelines:
+- Ground all answers in the knowledge base retrieved by the file_search tool
+- Be specific and quantitative where the data supports it
+- Cite the source document or survey when referencing data (e.g. "According to the distributor survey...")
+- Be honest if the knowledge base does not contain sufficient information for a query
+- Keep responses professional, concise, and directly relevant to the user's persona`
 
-When referencing survey data, cite the source type (e.g., "According to survey respondents..." or "The data indicates...").
-If the knowledge base doesn't contain relevant information for a query, say so clearly and offer to discuss what you do know.
-
-${context ? context : 'Note: No specific knowledge base results were found for this query. Respond based on general AV industry knowledge and acknowledge the limitation.'}
-`
-
-    // Build message history for Claude
-    const messages: Anthropic.MessageParam[] = (history || []).map((msg) => ({
+    // Build input messages for the Responses API
+    const inputMessages = (history ?? []).map((msg) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
     }))
 
-    // Ensure last message is from user
-    if (messages.length === 0 || messages[messages.length - 1].role !== 'user') {
-      messages.push({ role: 'user', content: message })
-    }
+    // Build tool config — only include file_search if a vector store is configured
+    const vectorStoreId = process.env.OPENAI_VECTOR_STORE_ID
 
-    // Call Claude
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages,
+    // Call OpenAI Responses API (handles retrieval + generation in one call)
+    const response = await openai.responses.create({
+      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+      instructions: systemPrompt,
+      ...(vectorStoreId
+        ? { tools: [{ type: 'file_search' as const, vector_store_ids: [vectorStoreId] }] }
+        : {}),
+      input: inputMessages,
     })
 
-    const assistantMessage =
-      response.content[0].type === 'text' ? response.content[0].text : ''
+    const assistantMessage = response.output_text
 
     // Save assistant message
     await supabase.from('messages').insert({
@@ -113,7 +99,6 @@ ${context ? context : 'Note: No specific knowledge base results were found for t
     return NextResponse.json({
       message: assistantMessage,
       conversationId: activeConversationId,
-      sourcesFound: chunks.length,
     })
   } catch (error) {
     console.error('Chat error:', error)
