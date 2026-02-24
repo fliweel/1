@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
 
     // Build persona-aware system prompt
     const persona = PERSONAS.find((p) => p.id === personaId)
-    const isFirstMessage = (history ?? []).filter((m) => m.role === 'assistant').length === 0
 
     const systemPrompt = `You are Channel Agent, a BTP AI agent providing market intelligence for the Audio Visual (AV) industry channel ecosystem.
 
@@ -80,15 +79,11 @@ CHANNEL ECOSYSTEM DEFINITIONS
 CURRENT USER PERSONA
 The user has selected the persona: ${persona?.name ?? 'Unknown'}. ${persona?.systemPromptHint ?? ''}
 
-${isFirstMessage ? `GREETING INSTRUCTION
-This is the first message in this conversation. Begin your response with exactly the following sentence before anything else:
-"Hello, I'm Channel Agent, a BTP AI agent providing channel insights. Please confirm if you are a Vendor, Distributor, Reseller, Consultant, End User or Researcher?"
-Then continue with your response.` : ''}
-
 GUIDELINES
 - Always look at all knowledge sources, not just the platform survey, to provide a complete answer.
 - Be specific and use data where available.
 - Keep responses professional, concise, and directly relevant to the user's persona.
+- Format all responses using markdown: use bullet points for lists, bold for key terms, and headers where appropriate to aid readability.
 
 GUARDRAILS
 - Never provide or indicate how many respondents participated in surveys or the sample size (e.g. do not answer questions like "how many companies are in this information?").
