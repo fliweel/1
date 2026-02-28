@@ -7,9 +7,10 @@ import { PERSONAS } from '@/types'
 interface HeaderProps {
   personaId?: string | null
   showPersonaSwitch?: boolean
+  navLinks?: Array<{ label: string; href: string }>
 }
 
-export function Header({ personaId, showPersonaSwitch }: HeaderProps) {
+export function Header({ personaId, showPersonaSwitch, navLinks }: HeaderProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -52,6 +53,15 @@ export function Header({ personaId, showPersonaSwitch }: HeaderProps) {
             Switch Persona
           </button>
         )}
+        {navLinks?.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            {link.label}
+          </a>
+        ))}
         <button
           onClick={handleSignOut}
           className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"

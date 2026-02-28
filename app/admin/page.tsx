@@ -78,7 +78,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header showPersonaSwitch={false} />
+      <Header showPersonaSwitch={false} navLinks={[{ label: 'Analytics', href: '/analytics' }]} />
 
       <main className="flex-1 max-w-3xl mx-auto w-full p-6">
         <div className="mb-6">
